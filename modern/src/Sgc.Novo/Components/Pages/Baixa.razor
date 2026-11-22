@@ -1,0 +1,145 @@
+@page "/novo/baixa"
+@attribute [Authorize(Policy = "LoggedIn")]
+@inject InstallmentQueries Queries
+@inject BillingParameters Parameters
+@inject PaymentPosting Posting
+@inject IAuthorizationService Authorization
+
+<PageTitle>SGC - Baixa manual</PageTitle>
+<h1>Baixa manual de parcela</h1>
+@if (_message is not null)
+{
+    <span id="mensagem" class="@(_isError ? "msgErro" : "msgOk")">@_message</span>
+}
+
+<form method="get" class="filtro" data-enhance="false">
+    Nosso número: <input type="text" name="nn" class="campo" style="width:110px" maxlength="11" value="@Nn" />
+    &nbsp; <button type="submit" class="botao" id="buscar">Buscar</button>
+</form>
+
+@if (_installment is { } p)
+{
+    <div class="quadro">
+        <table class="form">
+            <tr>
+                <td class="rotulo">Grupo/cota:</td><td><a href="/Cotas/CotaDetalhe.aspx?id=@p.CdCota" data-enhance-nav="false">@p.DsCota</a></td>
+                <td class="rotulo">Consorciado:</td><td>@p.NmConsorciado</td>
+            </tr>
+            <tr>
+                <td class="rotulo">Parcela:</td><td>@p.NrParcela de @p.QtPrazoCota</td>
+                <td class="rotulo">Nosso número:</td><td>@p.NrNossoNumero</td>
+            </tr>
+            <tr>
+                <td class="rotulo">Vencimento:</td>
+                <td>@p.DtVencimento.ToString("dd/MM/yyyy")@(_feeFreeUntil != p.DtVencimento ? $" (pagável sem encargos até {_feeFreeUntil:dd/MM/yyyy})" : "")</td>
+                <td class="rotulo">Valor da parcela:</td><td><b>@Money(p.VlParcela)</b></td>
+            </tr>
+            <tr>
+                <td class="rotulo">Situação:</td>
+                <td colspan="3" id="situacao">@InstallmentStatus.Text(p.IdSituacao)@(p.IdSituacao == InstallmentStatus.Paid ? $" em {p.DtPagamento:dd/MM/yyyy} - {Money(p.VlPago ?? 0)}" : "")</td>
+            </tr>
+        </table>
+    </div>
+
+    @if (p.IdSituacao == InstallmentStatus.Issued && _canPost)
+    {
+        <div class="quadro">
+            @* GET: recalculating is just looking; nothing is written *@
+            <form method="get" data-enhance="false">
+                <input type="hidden" name="id" value="@p.CdParcela" />
+                <table class="form">
+                    <tr>
+                        <td class="rotulo">Data do pagamento:</td>
+                        <td><input type="date" name="data" class="campo" value="@_paidOn.ToString("yyyy-MM-dd")" />
+                            <button type="submit" class="botao" id="calcular">Calcular encargos</button></td>
+                    </tr>
+                    <tr><td class="rotulo">Multa:</td><td id="multa">@Money(_fee.Fine)</td></tr>
+                    <tr><td class="rotulo">Juros:</td><td id="juros">@Money(_fee.Interest) @(_fee.DaysLate > 0 ? $"({_fee.DaysLate} dias)" : "")</td></tr>
+                    <tr><td class="rotulo">Total devido:</td><td id="devido"><b>@Money(_fee.Total(p.VlParcela))</b></td></tr>
+                </table>
+            </form>
+            @* POST: the fees are recalculated on the server from the date; the browser only sends date and amount *@
+            <form method="post" @formname="baixa" @onsubmit="PostAsync" data-enhance="false">
+                <AntiforgeryToken />
+                <input type="hidden" name="Form.Id" value="@p.CdParcela" />
+                <input type="hidden" name="Form.PaidOn" value="@_paidOn.ToString("yyyy-MM-dd")" />
+                <table class="form">
+                    <tr>
+                        <td class="rotulo">Valor pago:</td>
+                        <td><input type="text" name="Form.AmountPaid" id="valorPago" class="campo" style="width:90px" value="@_fee.Total(p.VlParcela).ToString("N2", PtBr)" /></td>
+                    </tr>
+                </table>
+                <button type="submit" class="botaoPrincipal" id="confirmar" onclick="return confirm('Confirma a baixa da parcela?');">Confirmar baixa</button>
+            </form>
+        </div>
+    }
+}
+
+@code {
+    static readonly CultureInfo PtBr = new("pt-BR");
+
+    [CascadingParameter] Task<AuthenticationState> Authentication { get; set; } = null!;
+    [SupplyParameterFromQuery] public int? Id { get; set; }
+    [SupplyParameterFromQuery] public string? Nn { get; set; }
+    [SupplyParameterFromQuery] public DateTime? Data { get; set; }
+    [SupplyParameterFromForm(FormName = "baixa")] public PaymentForm? Form { get; set; }
+
+    InstallmentForPayment? _installment;
+    LateFeeCalculator _rule = null!;
+    LateFee _fee = new(0, 0, 0);
+    DateTime _paidOn = DateTime.Today;
+    DateTime _feeFreeUntil;
+    bool _canPost;
+    string? _message;
+    bool _isError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        Form ??= new();
+        _rule = await Parameters.CalculatorAsync();
+        var user = (await Authentication).User;
+        _canPost = (await Authorization.AuthorizeAsync(user, SessionBridge.CanPostPayments)).Succeeded;
+
+        var id = Form.Id ?? Id;
+        if (id is null && !string.IsNullOrWhiteSpace(Nn))
+        {
+            id = await Queries.FindByNossoNumeroAsync(Nn);
+            if (id is null) Error("Nosso número não encontrado.");
+        }
+        _paidOn = (Form.PaidOn ?? Data ?? DateTime.Today).Date;
+        if (id is not null) await LoadAsync(id.Value);
+    }
+
+    async Task LoadAsync(int id)
+    {
+        _installment = await Queries.ForPaymentAsync(id);
+        if (_installment is null) { Error("Parcela não encontrada."); return; }
+        _feeFreeUntil = _rule.FeeFreeUntil(_installment.DtVencimento);
+        _fee = _rule.Calculate(_installment.VlParcela, _installment.DtVencimento, _paidOn);
+    }
+
+    async Task PostAsync()
+    {
+        if (_installment is null || !_canPost) return;
+        if (_paidOn > DateTime.Today) { Error("Data de pagamento no futuro."); return; }
+        if (!decimal.TryParse(Form!.AmountPaid, NumberStyles.Number, PtBr, out var amountPaid)) { Error("Valor pago inválido."); return; }
+
+        var userId = int.Parse((await Authentication).User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        var result = await Posting.PostAsync(_installment.CdParcela, _installment.DtVencimento, _installment.VlParcela,
+                                             _paidOn, amountPaid, userId, _rule);
+        _message = result.Message;
+        _isError = result.Status != PostingStatus.Posted;
+        await LoadAsync(_installment.CdParcela);
+    }
+
+    void Error(string message) { _message = message; _isError = true; }
+
+    static string Money(decimal value) => value.ToString("C2", PtBr);
+
+    public class PaymentForm
+    {
+        public int? Id { get; set; }
+        public DateTime? PaidOn { get; set; }
+        public string? AmountPaid { get; set; }
+    }
+}

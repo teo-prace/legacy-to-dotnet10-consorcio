@@ -1,0 +1,65 @@
+@page "/novo/parcelas"
+@attribute [Authorize(Policy = "LoggedIn")]
+@inject InstallmentQueries Queries
+@inject NavigationManager Navigation
+
+<PageTitle>SGC - Parcelas</PageTitle>
+<h1>Consulta de parcelas</h1>
+@* GET form: the filter lives in the URL, so deep links, refresh and Back work with no extra code (spike 04) *@
+<form method="get" class="filtro" data-enhance="false">
+    Grupo:
+    <select name="grupo" class="campo">
+        <option value="">(todos)</option>
+        @foreach (var g in _groups)
+        {
+            <option value="@g.CdGrupo" selected="@(Grupo == g.CdGrupo)">@g.NrGrupo</option>
+        }
+    </select>
+    &nbsp; Situação:
+    <select name="situacao" class="campo">
+        @foreach (var (value, text) in Statuses)
+        {
+            <option value="@value" selected="@(_filter.Status == value)">@text</option>
+        }
+    </select>
+    &nbsp; Vencimento de: <input type="date" name="de" class="campo" value="@De?.ToString("yyyy-MM-dd")" />
+    até: <input type="date" name="ate" class="campo" value="@Ate?.ToString("yyyy-MM-dd")" />
+    &nbsp; Nosso nº: <input type="text" name="nn" class="campo" style="width:90px" value="@Nn" />
+    &nbsp; <button type="submit" class="botao" id="pesquisar">Pesquisar</button>
+</form>
+
+<InstallmentGrid Rows="_rows" Total="_total" CurrentPage="_filter.Page" PageUrl="PageUrl" />
+
+@code {
+    public static readonly (string Value, string Text)[] Statuses =
+        [("V", "Vencidas em aberto"), ("2", "Emitidas"), ("3", "Pagas"), ("1", "Não emitidas"), ("T", "(todas)")];
+
+    // same query-string names as the legacy screen, so old links keep working
+    [SupplyParameterFromQuery] public int? Grupo { get; set; }
+    [SupplyParameterFromQuery] public string? Situacao { get; set; }
+    [SupplyParameterFromQuery] public DateTime? De { get; set; }
+    [SupplyParameterFromQuery] public DateTime? Ate { get; set; }
+    [SupplyParameterFromQuery] public string? Nn { get; set; }
+    [SupplyParameterFromQuery] public int? Pagina { get; set; }
+
+    InstallmentFilter _filter = InstallmentFilter.Default;
+    IReadOnlyList<GroupOption> _groups = [];
+    IReadOnlyList<InstallmentRow> _rows = [];
+    int _total;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // missing = overdue (default); present and empty = all. Model binding turns "" into null, which made
+        // "all" fall back to the default filter with no error: caught by the parity test (spike 04, finding 1)
+        var status = string.IsNullOrEmpty(Situacao)
+            ? (new Uri(Navigation.Uri).Query.Contains("situacao=") ? "T" : "V")
+            : Situacao;
+        _filter = new InstallmentFilter(Grupo, status, De, Ate, Nn, Math.Max(1, Pagina ?? 1));
+        _groups = await Queries.GroupsAsync();
+        (_rows, _total) = await Queries.SearchAsync(_filter);
+    }
+
+    // paging stays on whichever URL the user is on (the old .aspx one or /novo/parcelas)
+    string PageUrl(int page) =>
+        $"{new Uri(Navigation.Uri).AbsolutePath}?grupo={Grupo}&situacao={Uri.EscapeDataString(_filter.Status)}&de={De?.ToString("yyyy-MM-dd")}&ate={Ate?.ToString("yyyy-MM-dd")}&nn={Uri.EscapeDataString(Nn ?? "")}&pagina={page}";
+}

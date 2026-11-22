@@ -24,6 +24,10 @@
   <ItemGroup>
     <!-- compiled here instead of referenced: Smart App Control on the dev machine blocks freshly built library DLLs -->
     <Compile Include="..\..\spikes\05-shared-database\BaixaParcelas.cs" Link="Spikes\Code\BaixaParcelas.cs" />
+    <!-- the billing rule of the new system, compiled as-is: parity tests run the exact source that ships -->
+    <Compile Include="..\..\modern\src\Sgc.Novo\Billing\LateFees.cs" Link="Modern\Code\LateFees.cs" />
+    <Compile Include="..\..\modern\src\Sgc.Novo\Billing\Boleto.cs" Link="Modern\Code\Boleto.cs" />
+    <Compile Include="..\..\modern\src\Sgc.Novo\Billing\PaymentPosting.cs" Link="Modern\Code\PaymentPosting.cs" />
   </ItemGroup>
 
 </Project>

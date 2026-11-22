@@ -1,0 +1,48 @@
+@* Installment grid, same columns and order as the legacy screen. Links use the old URLs: the facade
+   decides whether the legacy or the new screen answers them. *@
+<table class="grid" id="grade">
+    <tr><th>Grupo/cota</th><th>Consorciado</th><th>Parc.</th><th>Vencimento</th><th>Nosso número</th><th>Valor</th><th>Pago em</th><th>Valor pago</th><th>Dias atraso</th><th>Situação</th><th></th></tr>
+    @foreach (var r in Rows)
+    {
+        <tr class="@(r.Ordem % 2 == 0 ? "alt" : "")">
+            <td><a href="/Cotas/CotaDetalhe.aspx?id=@r.CdCota" data-enhance-nav="false">@r.DsCota</a></td>
+            <td>@r.NmConsorciado</td>
+            <td class="num">@r.NrParcela</td>
+            <td>@r.DtVencimento?.ToString("dd/MM/yyyy")</td>
+            <td class="nn">@r.NrNossoNumero</td>
+            <td class="num">@r.VlParcela?.ToString("N2")</td>
+            <td>@r.DtPagamento?.ToString("dd/MM/yyyy")</td>
+            <td class="num">@r.VlPago?.ToString("N2")</td>
+            <td class="num">@r.QtDiasAtraso</td>
+            <td>@r.StatusText</td>
+            <td>
+                @if (r.IdSituacao == InstallmentStatus.Issued)
+                {
+                    <a href="/Cobranca/Boleto.aspx?id=@r.CdParcela" target="_blank" data-enhance-nav="false">Boleto</a>
+                    <text> </text>
+                    <a href="/Cobranca/Baixa.aspx?id=@r.CdParcela" data-enhance-nav="false">Baixar</a>
+                }
+            </td>
+        </tr>
+    }
+</table>
+<p id="total">@Total parcela(s)@(Total == 2000 ? " (limitado a 2000; refine o filtro)" : "")</p>
+@if (Pages > 1)
+{
+    <p id="paginas">
+        @for (var i = 1; i <= Pages; i++)
+        {
+            if (i == CurrentPage) { <b>@i</b> }
+            else { <a href="@PageUrl(i)">@i</a> }
+            <text> </text>
+        }
+    </p>
+}
+
+@code {
+    [Parameter] public IReadOnlyList<InstallmentRow> Rows { get; set; } = [];
+    [Parameter] public int Total { get; set; }
+    [Parameter] public int CurrentPage { get; set; } = 1;
+    [Parameter, EditorRequired] public Func<int, string> PageUrl { get; set; } = null!;
+    int Pages => (int)Math.Ceiling(Total / (double)InstallmentQueries.PageSize);
+}
