@@ -22,7 +22,7 @@ phase retires part of the old system. Details in [approach](approach/README.md).
 |---|---|---|
 | [`legacy/`](legacy) | The client's system as received: WebForms back office, classic ASP portal, VB6 components, batch, SQL Server | done |
 | [`approach/`](approach) | How the migration is run and what makes it different | done |
-| [`assessment/`](assessment) | Phase 1: inventory, business rules map, findings, characterization tests | report done, tests in progress |
+| [`assessment/`](assessment) | Phase 1: inventory, business rules map, findings, characterization tests | done |
 | [`decisions/`](decisions) | Phase 2: research on failed migrations, architecture decision records, migration plan | in progress |
 | [`spikes/`](spikes) | Experiments with automated tests behind each decision | in progress |
 | [`modern/`](modern) | Phase 3: the .NET 10 system growing next to the legacy one | in progress |

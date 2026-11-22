@@ -51,5 +51,22 @@ system can be compared with it. For billing, the legacy code itself is executed 
 VB.NET libraries and batch through a small .NET Framework 4.8 harness, the VB6 component through COM,
 and the payment screen through a browser.
 
-> In progress: the oracle harness and the characterization tests are being moved into this
-> repository.
+Tests: [`tests/Sgc.Tests/Characterization`](../tests/Sgc.Tests/Characterization). Oracle:
+[`tools/oracle`](../tools/oracle).
+
+| Test | What it records |
+|---|---|
+| C-1 · boleto | VB.NET and VB6 produce the same typeable line for all 2,287 issued installments and for the 2025 factor reset; they part ways on 01/01/2050, when VB6 produces an invalid line (R6) |
+| C-2 · late fees | 333,960 cases (33 installment values × 220 due dates, including every holiday × 0 to 45 days late). Against the payment screen: the **batch charges fees in 1,485 cases** where the customer paid within the grace period after a holiday (R2); the **portal charges in 4,356 cases** after a weekend or holiday (R3); and the batch differs by one cent in 27,036 cases because it rounds half away from zero (R4) |
+| C-3 · payment screen | The rule used as the reference in C-2 is checked against the real screen in the browser: 42 of 42 cases match |
+
+These numbers go to the business with the decision they require: which rule is right, and what
+changes for customers when the new system applies it everywhere.
+
+Running them needs the legacy built (`legacy\src\build.cmd`), the database (`legacy\database\criar_banco.cmd`),
+the VB6 component registered (`legacy\vb6\SGCBoleto\compilar.ps1`) and the oracle
+(`dotnet build tools\oracle`):
+
+```bat
+dotnet test tests\Sgc.Tests --filter Area=Characterization
+```

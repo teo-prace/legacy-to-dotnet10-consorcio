@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Runs the legacy VB.NET code on its original runtime (.NET Framework 4.8), out of process.
+       .NET 10 cannot load SGC.Batch.exe (a "prefer 32-bit" executable). -->
+  <PropertyGroup>
+    <TargetFramework>net48</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>Oracle</AssemblyName>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <Prefer32Bit>false</Prefer32Bit>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="SGC.Negocio"><HintPath>..\..\legacy\src\SGC.Negocio\bin\Debug\SGC.Negocio.dll</HintPath></Reference>
+    <Reference Include="SGC.Batch"><HintPath>..\..\legacy\src\SGC.Batch\bin\Debug\SGC.Batch.exe</HintPath></Reference>
+    <Reference Include="SGC.Comum"><HintPath>..\..\legacy\src\SGC.Comum\bin\Debug\SGC.Comum.dll</HintPath></Reference>
+    <Reference Include="Microsoft.VisualBasic" />
+  </ItemGroup>
+</Project>
