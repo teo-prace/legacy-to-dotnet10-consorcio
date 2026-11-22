@@ -1,0 +1,76 @@
+IF OBJECT_ID('SP_REGISTRA_LANCE') IS NOT NULL DROP PROCEDURE SP_REGISTRA_LANCE
+GO
+/*****************************************************************************
+  Registra (ou substitui) o lance da cota para a assembleia.
+  Validacoes de registro: AGO agendada, ate a vespera, cota do grupo e ativa.
+  As regras de percentual sao conferidas na apuracao (desclassificacao).
+  2014-08 J.P.
+*****************************************************************************/
+CREATE PROCEDURE SP_REGISTRA_LANCE
+    @CD_ASSEMBLEIA  INT,
+    @CD_COTA        INT,
+    @ID_TIPO_LANCE  TINYINT,
+    @PC_LANCE       DECIMAL(9,4),
+    @PC_EMBUTIDO    DECIMAL(9,4) = 0,
+    @CD_USUARIO     INT,
+    @DT_REGISTRO    DATETIME = NULL
+AS
+SET NOCOUNT ON
+
+DECLARE @ID_SIT TINYINT, @CD_GRUPO INT, @DT_AGO DATETIME, @ID_SIT_COTA TINYINT, @CD_GRUPO_COTA INT
+
+IF @DT_REGISTRO IS NULL SET @DT_REGISTRO = GETDATE()
+IF @PC_EMBUTIDO IS NULL SET @PC_EMBUTIDO = 0
+
+SELECT @ID_SIT = ID_SITUACAO, @CD_GRUPO = CD_GRUPO, @DT_AGO = DT_ASSEMBLEIA
+  FROM TB_ASSEMBLEIA WHERE CD_ASSEMBLEIA = @CD_ASSEMBLEIA
+
+SELECT @ID_SIT_COTA = ID_SITUACAO, @CD_GRUPO_COTA = CD_GRUPO
+  FROM TB_COTA WHERE CD_COTA = @CD_COTA
+
+IF @ID_SIT IS NULL OR @ID_SIT <> 1
+BEGIN
+    RAISERROR('Assembleia nao esta agendada.', 16, 1)
+    RETURN 1
+END
+
+IF @DT_REGISTRO >= @DT_AGO
+BEGIN
+    RAISERROR('Prazo para lances encerrado (ate a vespera da assembleia).', 16, 1)
+    RETURN 1
+END
+
+IF @CD_GRUPO_COTA IS NULL OR @CD_GRUPO_COTA <> @CD_GRUPO
+BEGIN
+    RAISERROR('Cota nao pertence ao grupo da assembleia.', 16, 1)
+    RETURN 1
+END
+
+IF @ID_SIT_COTA <> 1
+BEGIN
+    RAISERROR('Somente cota ativa nao contemplada pode ofertar lance.', 16, 1)
+    RETURN 1
+END
+
+IF @ID_TIPO_LANCE NOT IN (1, 2) OR @PC_LANCE <= 0 OR @PC_LANCE > 100 OR @PC_EMBUTIDO < 0
+BEGIN
+    RAISERROR('Lance invalido.', 16, 1)
+    RETURN 1
+END
+
+IF EXISTS (SELECT 1 FROM TB_LANCE WHERE CD_ASSEMBLEIA = @CD_ASSEMBLEIA AND CD_COTA = @CD_COTA)
+    UPDATE TB_LANCE
+       SET ID_TIPO_LANCE = @ID_TIPO_LANCE, PC_LANCE = @PC_LANCE, PC_EMBUTIDO = @PC_EMBUTIDO,
+           DT_REGISTRO = @DT_REGISTRO, CD_USUARIO = @CD_USUARIO, ID_SITUACAO = 1, DS_MOTIVO = NULL
+     WHERE CD_ASSEMBLEIA = @CD_ASSEMBLEIA AND CD_COTA = @CD_COTA
+ELSE
+    INSERT INTO TB_LANCE (CD_ASSEMBLEIA, CD_COTA, ID_TIPO_LANCE, PC_LANCE, PC_EMBUTIDO, DT_REGISTRO, CD_USUARIO, ID_SITUACAO)
+    VALUES (@CD_ASSEMBLEIA, @CD_COTA, @ID_TIPO_LANCE, @PC_LANCE, @PC_EMBUTIDO, @DT_REGISTRO, @CD_USUARIO, 1)
+
+IF @@ERROR <> 0
+BEGIN
+    RAISERROR('Erro ao registrar lance.', 16, 1)
+    RETURN 1
+END
+RETURN 0
+GO

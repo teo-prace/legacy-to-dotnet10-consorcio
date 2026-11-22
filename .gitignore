@@ -1,0 +1,13 @@
+# build output
+bin/
+obj/
+TestResults/
+legacy/src/PrecompiledWeb/
+legacy/src/SGC.Web/Bin/
+legacy/vb6/SGCBoleto/build/
+
+# IDE
+.vs/
+*.user
+*.suo
+*.log

@@ -1,0 +1,80 @@
+IF OBJECT_ID('SP_REAJUSTA_BENS') IS NOT NULL DROP PROCEDURE SP_REAJUSTA_BENS
+GO
+/*****************************************************************************
+  Reajuste anual dos bens/creditos de referencia.
+
+  Para cada bem ativo: variacao acumulada dos 12 meses anteriores do indice
+  DO BEM; nova vigencia no 1o dia do mes informado.
+  Sem os 12 indices: pula o bem (indices sao cadastrados no SGC Desktop).
+  Rodar de novo no mesmo mes nao duplica.
+
+  2006-01 R.A.
+  2016-02 J.P. chamada pelo SGC.Batch
+*****************************************************************************/
+CREATE PROCEDURE SP_REAJUSTA_BENS
+    @NR_ANO_MES INT,
+    @CD_USUARIO INT
+AS
+SET NOCOUNT ON
+
+DECLARE @DT_VIG DATETIME, @AM_INI INT, @AM_FIM INT,
+        @CD_BEM INT, @DS_BEM VARCHAR(100), @CD_INDICE TINYINT, @SG_INDICE VARCHAR(10),
+        @VL_ANT MONEY, @QT INT, @FATOR FLOAT, @VL_NOVO MONEY, @MSG VARCHAR(200)
+
+SET @DT_VIG = CAST(CAST(@NR_ANO_MES AS VARCHAR) + '01' AS DATETIME)
+SET @AM_INI = YEAR(DATEADD(MONTH, -12, @DT_VIG)) * 100 + MONTH(DATEADD(MONTH, -12, @DT_VIG))
+SET @AM_FIM = YEAR(DATEADD(MONTH, -1, @DT_VIG)) * 100 + MONTH(DATEADD(MONTH, -1, @DT_VIG))
+
+CREATE TABLE #RESULTADO (CD_BEM INT, DS_BEM VARCHAR(100), SG_INDICE VARCHAR(10), VL_ANTERIOR MONEY,
+                         PC_REAJUSTE DECIMAL(9,4), VL_NOVO MONEY, DS_SITUACAO VARCHAR(100))
+
+DECLARE C_BENS CURSOR LOCAL FAST_FORWARD FOR
+    SELECT B.CD_BEM, B.DS_BEM, B.CD_INDICE, I.SG_INDICE
+      FROM TB_BEM B INNER JOIN TB_INDICE I ON I.CD_INDICE = B.CD_INDICE
+     WHERE B.FL_ATIVO = 'S'
+     ORDER BY B.ID_TIPO_BEM, B.VL_BEM
+
+OPEN C_BENS
+FETCH NEXT FROM C_BENS INTO @CD_BEM, @DS_BEM, @CD_INDICE, @SG_INDICE
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    SET @VL_ANT = dbo.FN_VALOR_BEM(@CD_BEM, DATEADD(DAY, -1, @DT_VIG))
+
+    IF EXISTS (SELECT 1 FROM TB_BEM_VALOR WHERE CD_BEM = @CD_BEM AND DT_VIGENCIA = @DT_VIG)
+        INSERT INTO #RESULTADO VALUES (@CD_BEM, @DS_BEM, @SG_INDICE, @VL_ANT, NULL, NULL, 'Ja reajustado neste mes')
+    ELSE
+    BEGIN
+        SELECT @QT = COUNT(*), @FATOR = EXP(SUM(LOG(1 + PC_VARIACAO / 100.0)))
+          FROM TB_INDICE_VALOR
+         WHERE CD_INDICE = @CD_INDICE AND NR_ANO_MES BETWEEN @AM_INI AND @AM_FIM
+
+        IF @QT < 12
+            INSERT INTO #RESULTADO VALUES (@CD_BEM, @DS_BEM, @SG_INDICE, @VL_ANT, NULL, NULL,
+                                           'Faltam ' + CAST(12 - @QT AS VARCHAR) + ' indice(s) - cadastrar no SGC Desktop')
+        ELSE
+        BEGIN
+            SET @VL_NOVO = ROUND(@VL_ANT * @FATOR, 2)
+
+            INSERT INTO TB_BEM_VALOR (CD_BEM, DT_VIGENCIA, VL_BEM, DS_MOTIVO, CD_USUARIO)
+            VALUES (@CD_BEM, @DT_VIG, @VL_NOVO, 'Reajuste anual ' + @SG_INDICE + ' ' + CAST(@NR_ANO_MES AS VARCHAR), @CD_USUARIO)
+
+            IF @DT_VIG <= GETDATE()
+                UPDATE TB_BEM SET VL_BEM = @VL_NOVO WHERE CD_BEM = @CD_BEM
+
+            INSERT INTO #RESULTADO VALUES (@CD_BEM, @DS_BEM, @SG_INDICE, @VL_ANT, ROUND((@FATOR - 1) * 100, 4), @VL_NOVO, 'Reajustado')
+        END
+    END
+
+    FETCH NEXT FROM C_BENS INTO @CD_BEM, @DS_BEM, @CD_INDICE, @SG_INDICE
+END
+
+CLOSE C_BENS
+DEALLOCATE C_BENS
+
+SET @MSG = CAST(@NR_ANO_MES AS VARCHAR) + ' - ' + CAST((SELECT COUNT(*) FROM #RESULTADO WHERE DS_SITUACAO = 'Reajustado') AS VARCHAR) + ' bens reajustados'
+EXEC SP_GRAVA_LOG @CD_USUARIO, 'REAJUSTE_BENS', @MSG
+
+SELECT * FROM #RESULTADO
+RETURN 0
+GO

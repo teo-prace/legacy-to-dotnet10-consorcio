@@ -1,0 +1,59 @@
+<%@ Master Language="VB" AutoEventWireup="false" CodeFile="Site.master.vb" Inherits="Site" %>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head runat="server">
+    <title>SGC</title>
+    <link href="~/css/estilo.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+    <form id="form1" runat="server">
+    <table class="topo" cellpadding="0" cellspacing="0">
+        <tr>
+            <td class="topoLogo">SGC <span>CeCons Consórcios</span></td>
+            <td class="topoUsuario">
+                <asp:Label ID="lblUsuario" runat="server" /> &nbsp;|&nbsp;
+                <asp:Label ID="lblData" runat="server" /> &nbsp;|&nbsp;
+                <asp:LinkButton ID="lnkSair" runat="server" CausesValidation="false">Sair</asp:LinkButton>
+            </td>
+        </tr>
+    </table>
+    <table class="corpo" cellpadding="0" cellspacing="0">
+        <tr>
+            <td class="menu">
+                <div class="menuTitulo">Início</div>
+                <a href="<%= ResolveUrl("~/Default.aspx") %>">Painel</a>
+                <div class="menuTitulo">Cadastros</div>
+                <a href="<%= ResolveUrl("~/Cadastro/Consorciados.aspx") %>">Consorciados</a>
+                <a href="<%= ResolveUrl("~/Cadastro/Bens.aspx") %>">Bens / créditos</a>
+                <a href="<%= ResolveUrl("~/Cadastro/Indices.aspx") %>">Índices de reajuste</a>
+                <a href="<%= ResolveUrl("~/Cadastro/PontosVenda.aspx") %>">Pontos de venda</a>
+                <div class="menuTitulo">Comercial</div>
+                <a href="<%= ResolveUrl("~/Comercial/Simulacao.aspx") %>">Simulação</a>
+                <a href="<%= ResolveUrl("~/Comercial/Propostas.aspx") %>">Propostas</a>
+                <a href="<%= ResolveUrl("~/Comercial/Planos.aspx") %>">Planos</a>
+                <div class="menuTitulo">Grupos</div>
+                <a href="<%= ResolveUrl("~/Grupos/Grupos.aspx") %>">Grupos</a>
+                <div class="menuTitulo">Assembleias</div>
+                <a href="<%= ResolveUrl("~/Assembleia/Assembleias.aspx") %>">Assembleias</a>
+                <a href="<%= ResolveUrl("~/Assembleia/Contemplacoes.aspx") %>">Contemplações</a>
+                <div class="menuTitulo">Cobrança</div>
+                <a href="<%= ResolveUrl("~/Cobranca/Parcelas.aspx") %>">Parcelas</a>
+                <a href="<%= ResolveUrl("~/Cobranca/Baixa.aspx") %>">Baixa manual</a>
+                <a href="<%= ResolveUrl("~/Cobranca/Inadimplencia.aspx") %>">Inadimplência</a>
+                <a href="<%= ResolveUrl("~/Cobranca/Emissao.aspx") %>">Emissão</a>
+                <a href="<%= ResolveUrl("~/Cobranca/Retornos.aspx") %>">Retornos bancários</a>
+                <asp:Panel ID="pnlAdmin" runat="server">
+                    <div class="menuTitulo">Administração</div>
+                    <a href="<%= ResolveUrl("~/Admin/Usuarios.aspx") %>">Usuários</a>
+                </asp:Panel>
+            </td>
+            <td class="conteudo">
+                <asp:ContentPlaceHolder ID="cphConteudo" runat="server" />
+            </td>
+        </tr>
+    </table>
+    <div class="rodape">SGC versão 4.2 &nbsp;·&nbsp; CeCons Administradora de Consórcios</div>
+    </form>
+    <script type="text/javascript" src="<%= ResolveUrl("~/js/sgc.js") %>"></script>
+</body>
+</html>

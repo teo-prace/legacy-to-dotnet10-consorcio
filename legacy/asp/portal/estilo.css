@@ -1,0 +1,14 @@
+body { margin: 10px; font-family: Tahoma, Verdana, Arial; font-size: 11px; background: #dfe8d8; }
+a { color: #2e5e1e; }
+h1 { font-size: 15px; color: #2e5e1e; border-bottom: 1px solid #2e5e1e; padding-bottom: 3px; }
+.topo { background: #3a7a26; color: #fff; font-size: 18px; font-weight: bold; padding: 8px; }
+.topo span { font-size: 11px; font-weight: normal; }
+.topo a { color: #fff; }
+.conteudo { background: #fff; padding: 12px; border: 1px solid #9bb88f; }
+.rodape { text-align: center; color: #555; padding: 6px; font-size: 10px; }
+.tabela { border-collapse: collapse; }
+.tabela th { background: #cfe0c6; border: 1px solid #9bb88f; padding: 3px 6px; text-align: left; }
+.tabela td { border: 1px solid #d6e2cf; padding: 2px 6px; }
+.direita { text-align: right; }
+.erro { color: #a00; font-weight: bold; }
+.aviso { background: #fff7d6; border: 1px solid #e6c84a; padding: 5px; margin: 6px 0; }

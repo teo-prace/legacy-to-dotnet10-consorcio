@@ -1,0 +1,52 @@
+/* SGC - estilo da retaguarda (2011) */
+body { margin: 0; font-family: Verdana, Arial, sans-serif; font-size: 11px; color: #222; background: #e9edf2; }
+a { color: #1f4e79; }
+h1 { font-size: 16px; color: #1f4e79; margin: 0 0 10px 0; padding-bottom: 4px; border-bottom: 2px solid #1f4e79; }
+h2 { font-size: 13px; color: #1f4e79; margin: 16px 0 6px 0; }
+
+.topo { width: 100%; background: #1f4e79; color: #fff; height: 42px; }
+.topoLogo { padding-left: 12px; font-size: 20px; font-weight: bold; letter-spacing: 1px; }
+.topoLogo span { font-size: 11px; font-weight: normal; letter-spacing: 0; color: #c9d9ea; }
+.topoUsuario { text-align: right; padding-right: 12px; }
+.topoUsuario a { color: #fff; }
+
+.corpo { width: 100%; }
+.menu { width: 170px; vertical-align: top; background: #f6f8fa; border-right: 1px solid #c5ced8; padding: 6px 0; height: 600px; }
+.menu a { display: block; padding: 3px 14px; text-decoration: none; }
+.menu a:hover { background: #dbe5f0; }
+.menuTitulo { font-weight: bold; color: #555; padding: 8px 8px 2px 8px; text-transform: uppercase; font-size: 10px; }
+.conteudo { vertical-align: top; padding: 12px 16px; background: #fff; }
+.rodape { text-align: center; color: #777; padding: 6px; font-size: 10px; }
+
+.form td { padding: 3px 4px; }
+.form td.rotulo { text-align: right; white-space: nowrap; color: #444; width: 150px; }
+.campo { font-family: Verdana; font-size: 11px; border: 1px solid #9aa7b5; padding: 2px; }
+.botao { font-family: Verdana; font-size: 11px; background: #dfe7ef; border: 1px solid #7d8fa3; padding: 3px 10px; cursor: pointer; }
+.botaoPrincipal { font-family: Verdana; font-size: 11px; background: #1f4e79; color: #fff; border: 1px solid #163a5a; padding: 3px 10px; cursor: pointer; }
+.filtro { background: #f2f5f8; border: 1px solid #d0d8e0; padding: 6px; margin-bottom: 8px; }
+.quadro { border: 1px solid #c5ced8; padding: 8px; margin-bottom: 10px; background: #fafbfc; }
+
+.grid { border-collapse: collapse; border: 1px solid #b7c2ce; }
+.grid th { background: #d6e0ea; color: #1f3550; padding: 3px 6px; border: 1px solid #b7c2ce; text-align: left; }
+.grid td { padding: 2px 6px; border: 1px solid #dde3e9; }
+.grid .alt td { background: #f4f7fa; }
+.grid .rodapeGrid td { background: #eef2f6; font-weight: bold; }
+.num { text-align: right; }
+.centro { text-align: center; }
+
+.msgOk { display: block; color: #1b5e20; background: #e8f5e9; border: 1px solid #a5d6a7; padding: 5px; margin-bottom: 8px; }
+.msgErro { display: block; color: #8b0000; background: #fdecea; border: 1px solid #f5b7b1; padding: 5px; margin-bottom: 8px; }
+.aviso { color: #7a5a00; background: #fff8e1; border: 1px solid #ffe08a; padding: 5px; margin-bottom: 8px; }
+
+.painel { display: inline-block; width: 170px; border: 1px solid #c5ced8; margin: 0 8px 8px 0; padding: 8px; background: #f6f8fa; vertical-align: top; }
+.painel .valor { font-size: 22px; font-weight: bold; color: #1f4e79; }
+
+.mapa { border-collapse: separate; border-spacing: 3px; }
+.mapa td { width: 44px; height: 30px; text-align: center; border: 1px solid #999; font-size: 10px; }
+.mapa a { text-decoration: none; color: #000; display: block; }
+.cota1 { background: #c8e6c9; }  /* ativa */
+.cota2 { background: #90caf9; }  /* contemplada */
+.cota3 { background: #ef9a9a; }  /* excluida */
+.cota4 { background: #ffcc80; }  /* desistente */
+.cota5 { background: #b0bec5; }  /* quitada */
+.cotaLivre { background: #fff; color: #aaa; }

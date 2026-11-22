@@ -1,0 +1,61 @@
+IF OBJECT_ID('SP_AMORTIZA_LANCE') IS NOT NULL DROP PROCEDURE SP_AMORTIZA_LANCE
+GO
+/*****************************************************************************
+  Amortiza o lance no fundo comum das ultimas parcelas em aberto
+  (da ultima para tras). Taxa de administracao e fundo de reserva nao mudam.
+  Nao abre transacao: chamada dentro da SP_APURA_ASSEMBLEIA.
+  2014-08 J.P.
+*****************************************************************************/
+CREATE PROCEDURE SP_AMORTIZA_LANCE
+    @CD_COTA  INT,
+    @PC_LANCE DECIMAL(9,4)
+AS
+SET NOCOUNT ON
+
+DECLARE @RESTA DECIMAL(12,6), @CD_PARCELA INT, @PC_FC DECIMAL(9,6), @ABATE DECIMAL(9,6)
+
+SET @RESTA = @PC_LANCE
+
+DECLARE C_AMORT CURSOR LOCAL FAST_FORWARD FOR
+    SELECT CD_PARCELA, PC_FUNDO_COMUM
+      FROM TB_PARCELA
+     WHERE CD_COTA = @CD_COTA
+       AND ID_SITUACAO = 1
+       AND PC_FUNDO_COMUM > 0
+     ORDER BY NR_PARCELA DESC
+
+OPEN C_AMORT
+FETCH NEXT FROM C_AMORT INTO @CD_PARCELA, @PC_FC
+
+WHILE @@FETCH_STATUS = 0 AND @RESTA > 0
+BEGIN
+    SET @ABATE = CASE WHEN @PC_FC <= @RESTA THEN @PC_FC ELSE @RESTA END
+
+    UPDATE TB_PARCELA
+       SET PC_FUNDO_COMUM = PC_FUNDO_COMUM - @ABATE,
+           PC_FC_AMORTIZADO_LANCE = ISNULL(PC_FC_AMORTIZADO_LANCE, 0) + @ABATE
+     WHERE CD_PARCELA = @CD_PARCELA
+
+    IF @@ERROR <> 0 GOTO ERRO
+
+    SET @RESTA = @RESTA - @ABATE
+    FETCH NEXT FROM C_AMORT INTO @CD_PARCELA, @PC_FC
+END
+
+CLOSE C_AMORT
+DEALLOCATE C_AMORT
+
+IF @RESTA > 0
+BEGIN
+    RAISERROR('Lance maior que o fundo comum das parcelas em aberto.', 16, 1)
+    RETURN 1
+END
+
+UPDATE TB_COTA SET PC_AMORTIZADO = PC_AMORTIZADO + @PC_LANCE WHERE CD_COTA = @CD_COTA
+IF @@ERROR <> 0 GOTO ERRO
+RETURN 0
+
+ERRO:
+RAISERROR('Erro ao amortizar lance.', 16, 1)
+RETURN 1
+GO

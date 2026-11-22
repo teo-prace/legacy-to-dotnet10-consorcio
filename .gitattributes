@@ -1,0 +1,18 @@
+* text=auto
+
+# Windows sources: CRLF
+*.vb     text eol=crlf
+*.aspx   text eol=crlf
+*.master text eol=crlf
+*.asax   text eol=crlf
+*.config text eol=crlf
+*.sql    text eol=crlf
+*.cmd    text eol=crlf
+*.sln    text eol=crlf
+*.vbproj text eol=crlf
+
+# VB6: CRLF required (the IDE won't open LF files)
+*.vbp    text eol=crlf
+*.frm    text eol=crlf
+*.bas    text eol=crlf
+*.cls    text eol=crlf
