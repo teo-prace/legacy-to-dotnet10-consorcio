@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><title>Outro site</title></head>
+<body>
+<h1>Site de terceiros (abrir por http://127.0.0.1:porta)</h1>
+<!-- clickjacking / cookies de terceiros: emoldura o SGC pela fachada e direto no legado -->
+<iframe id="pelaFachada" style="width:600px;height:300px"></iframe>
+<iframe id="direto" src="http://localhost:8090/Login.aspx" style="width:600px;height:300px"></iframe>
+<script>
+var fachada = 'http://localhost:' + location.port;
+var tela = new URLSearchParams(location.search).get('tela') || '/Login.aspx';
+document.getElementById('pelaFachada').src = fachada + tela;
+
+// tentativa de mandar mensagem forjada para o shell (deve ser ignorada pela validação de origem)
+if (new URLSearchParams(location.search).get('forjar') === '1') {
+  var shell = window.open(fachada + '/novo/shell.html?tela=/Default.aspx', 'shell');
+  setTimeout(function () { shell.postMessage({ tipo: 'sgc', acao: 'navegar', valor: 'https://exemplo.invalido/' }, '*'); }, 3000);
+}
+</script>
+</body>
+</html>

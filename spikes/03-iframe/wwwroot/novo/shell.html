@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>SGC · shell novo</title>
+<style>
+  body { margin: 0; font-family: Verdana, sans-serif; font-size: 12px; }
+  header { background: #1f4e79; color: #fff; padding: 8px 12px; }
+  iframe { width: 100%; border: 0; display: block; }
+  #log { font-size: 10px; background: #f3f3f3; margin: 0; padding: 4px 12px; max-height: 120px; overflow: auto; }
+</style>
+</head>
+<body>
+<header>SGC.Novo (shell .NET 10) · <span id="titulo"></span></header>
+<iframe id="legado" title="tela do legado"></iframe>
+<pre id="log"></pre>
+<script>
+// Mitigações testadas na POC-03 (cada uma liga/desliga pela query string do shell):
+//   sync=1   espelha a tela interna na URL do shell (#/caminho): link direto e F5 voltam para a mesma tela
+//   altura=1 ajusta a altura do iframe ao conteúdo (sem barra de rolagem dupla)
+//   login=1  se a tela interna virar o Login (sessão expirou), leva a janela inteira para o login
+var opcoes = new URLSearchParams(location.search);
+var ligado = function (k) { return opcoes.get(k) !== '0'; };
+var frame = document.getElementById('legado');
+var log = function (t) { document.getElementById('log').textContent += t + '\n'; };
+
+var inicial = location.hash.length > 1 ? location.hash.substring(1) : (opcoes.get('tela') || '/Default.aspx');
+frame.src = inicial;
+
+frame.addEventListener('load', function () {
+  var doc, caminho;
+  try {
+    doc = frame.contentDocument;                       // mesma origem: o shell enxerga o documento interno
+    caminho = frame.contentWindow.location.pathname + frame.contentWindow.location.search;
+  } catch (e) {
+    log('sem acesso ao conteúdo (origem diferente): ' + e.message);
+    return;
+  }
+  document.getElementById('titulo').textContent = doc.title;
+  log('carregou ' + caminho);
+
+  if (ligado('login') && /\/login\.aspx$/i.test(frame.contentWindow.location.pathname)) {
+    // a tela que o usuário tentava abrir está no ReturnUrl do login interno
+    var destino = new URLSearchParams(frame.contentWindow.location.search).get('ReturnUrl') || '/Default.aspx';
+    log('sessão expirada: indo para o login na janela inteira, depois volta para ' + destino);
+    top.location.href = '/Login.aspx?ReturnUrl=' + encodeURIComponent('/novo/shell.html#' + destino);
+    return;
+  }
+  if (ligado('sync')) history.replaceState(null, '', location.pathname + location.search + '#' + caminho);
+  if (ligado('altura')) frame.style.height = (doc.documentElement.scrollHeight + 4) + 'px';
+});
+
+// postMessage: só aceita mensagens da própria origem e com formato conhecido
+window.addEventListener('message', function (e) {
+  if (e.origin !== location.origin) { log('IGNORADA mensagem de ' + e.origin); return; }
+  if (!e.data || e.data.tipo !== 'sgc') { log('IGNORADA mensagem sem formato'); return; }
+  log('recebida: ' + JSON.stringify(e.data));
+  if (e.data.acao === 'altura') frame.style.height = e.data.valor + 'px';
+  if (e.data.acao === 'navegar') frame.src = e.data.valor;
+  e.source.postMessage({ tipo: 'sgc', acao: 'ok', ref: e.data.acao }, e.origin);   // resposta (bidirecional)
+});
+window.sgcLog = function () { return document.getElementById('log').textContent; };
+</script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><title>Tela nova dentro de iframe</title></head>
+<body>
+<h1>Tela nova (.NET 10) num iframe</h1>
+<button id="pedirAltura">Pedir altura 900</button>
+<button id="navegar">Pedir para o pai navegar</button>
+<pre id="respostas"></pre>
+<script>
+// Fala com o pai SÓ na origem esperada (nunca '*') e confere a origem das respostas.
+var pai = location.origin;
+document.getElementById('pedirAltura').onclick = function () {
+  parent.postMessage({ tipo: 'sgc', acao: 'altura', valor: 900 }, pai);
+};
+document.getElementById('navegar').onclick = function () {
+  parent.postMessage({ tipo: 'sgc', acao: 'navegar', valor: '/Grupos/Grupos.aspx' }, pai);
+};
+window.addEventListener('message', function (e) {
+  if (e.origin !== pai) return;
+  document.getElementById('respostas').textContent += JSON.stringify(e.data) + '\n';
+});
+</script>
+</body>
+</html>
