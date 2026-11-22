@@ -1,0 +1,62 @@
+@page "/novo/ssr/parcelas"
+@attribute [Authorize(Policy = "Logado")]
+@inject ConsultaParcelas Consulta
+@inject NavigationManager Navegacao
+
+<PageTitle>SGC - Parcelas</PageTitle>
+<h1>Consulta de parcelas</h1>
+@* GET: o filtro vai na URL (link direto, F5, Voltar funcionam sem código extra) *@
+<form method="get" class="filtro">
+    Grupo:
+    <select name="grupo" class="campo">
+        <option value="">(todos)</option>
+        @foreach (var g in _grupos)
+        {
+            <option value="@g.CdGrupo" selected="@(Grupo == g.CdGrupo)">@g.NrGrupo</option>
+        }
+    </select>
+    &nbsp; Situação:
+    <select name="situacao" class="campo">
+        @foreach (var (v, t) in Situacoes)
+        {
+            <option value="@v" selected="@(_filtro.Situacao == v)">@t</option>
+        }
+    </select>
+    &nbsp; Vencimento de: <input type="date" name="de" class="campo" value="@De?.ToString("yyyy-MM-dd")" />
+    até: <input type="date" name="ate" class="campo" value="@Ate?.ToString("yyyy-MM-dd")" />
+    &nbsp; Nosso nº: <input type="text" name="nn" class="campo" style="width:90px" value="@Nn" />
+    &nbsp; <button type="submit" class="botao" id="pesquisar">Pesquisar</button>
+</form>
+
+<GradeParcelas Linhas="_linhas" Total="_total" PaginaAtual="_filtro.Pagina" UrlPagina="UrlPagina" />
+
+@code {
+    public static readonly (string Valor, string Texto)[] Situacoes =
+        { ("V", "Vencidas em aberto"), ("2", "Emitidas"), ("3", "Pagas"), ("1", "Não emitidas"), ("T", "(todas)") };
+
+    [SupplyParameterFromQuery] public int? Grupo { get; set; }
+    [SupplyParameterFromQuery] public string? Situacao { get; set; }
+    [SupplyParameterFromQuery] public DateTime? De { get; set; }
+    [SupplyParameterFromQuery] public DateTime? Ate { get; set; }
+    [SupplyParameterFromQuery] public string? Nn { get; set; }
+    [SupplyParameterFromQuery] public int? Pagina { get; set; }
+
+    FiltroParcelas _filtro = FiltroParcelas.Padrao;
+    IReadOnlyList<Grupo> _grupos = [];
+    IReadOnlyList<LinhaParcela> _linhas = [];
+    int _total;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // parâmetro ausente = vencidas (padrão); presente e vazio = todas (mesmo achado da versão Razor Pages)
+        var situacao = string.IsNullOrEmpty(Situacao)
+            ? (new Uri(Navegacao.Uri).Query.Contains("situacao=") ? "T" : "V")
+            : Situacao;
+        _filtro = new FiltroParcelas(Grupo, situacao, De, Ate, Nn, Math.Max(1, Pagina ?? 1));
+        _grupos = await Consulta.GruposAsync();
+        (_linhas, _total) = await Consulta.PesquisarAsync(_filtro);
+    }
+
+    string UrlPagina(int p) =>
+        $"/novo/ssr/parcelas?grupo={Grupo}&situacao={Uri.EscapeDataString(_filtro.Situacao)}&de={De?.ToString("yyyy-MM-dd")}&ate={Ate?.ToString("yyyy-MM-dd")}&nn={Uri.EscapeDataString(Nn ?? "")}&pagina={p}";
+}

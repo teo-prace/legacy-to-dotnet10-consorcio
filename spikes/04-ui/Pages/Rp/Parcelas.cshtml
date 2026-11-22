@@ -1,0 +1,29 @@
+@page "/novo/rp/parcelas"
+@model Poc04.Ui.Pages.Rp.ParcelasModel
+@{
+    ViewData["Title"] = "SGC - Parcelas";
+}
+<h1>Consulta de parcelas</h1>
+<form method="get" class="filtro">
+    Grupo:
+    <select name="grupo" class="campo">
+        <option value="">(todos)</option>
+        @foreach (var g in Model.Grupos)
+        {
+            <option value="@g.CdGrupo" selected="@(Model.Filtro.Grupo == g.CdGrupo)">@g.NrGrupo</option>
+        }
+    </select>
+    &nbsp; Situação:
+    <select name="situacao" class="campo">
+        @foreach (var (v, t) in ParcelasModel.Situacoes)
+        {
+            <option value="@v" selected="@(Model.Filtro.Situacao == v)">@t</option>
+        }
+    </select>
+    &nbsp; Vencimento de: <input type="date" name="de" class="campo" value="@Model.Filtro.De?.ToString("yyyy-MM-dd")" />
+    até: <input type="date" name="ate" class="campo" value="@Model.Filtro.Ate?.ToString("yyyy-MM-dd")" />
+    &nbsp; Nosso nº: <input type="text" name="nn" class="campo" style="width:90px" value="@Model.Filtro.NossoNumero" />
+    &nbsp; <button type="submit" class="botao" id="pesquisar">Pesquisar</button>
+</form>
+
+<partial name="_GradeParcelas" model="Model" />

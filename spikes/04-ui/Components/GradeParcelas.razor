@@ -1,0 +1,50 @@
+@* Grade compartilhada pelas duas versões Blazor. Paginação por link (SSR) ou por evento (interativo). *@
+<table class="grid" id="grade">
+    <tr><th>Grupo/cota</th><th>Consorciado</th><th>Parc.</th><th>Vencimento</th><th>Nosso número</th><th>Valor</th><th>Pago em</th><th>Valor pago</th><th>Dias atraso</th><th>Situação</th><th></th></tr>
+    @foreach (var l in Linhas)
+    {
+        <tr class="@(l.Ordem % 2 == 0 ? "alt" : "")">
+            <td><a href="/Cotas/CotaDetalhe.aspx?id=@l.CdCota" data-enhance-nav="false">@l.DsCota</a></td>
+            <td>@l.NmConsorciado</td>
+            <td class="num">@l.NrParcela</td>
+            <td>@l.DtVencimento?.ToString("dd/MM/yyyy")</td>
+            <td class="nn">@l.NrNossoNumero</td>
+            <td class="num">@l.VlParcela?.ToString("N2")</td>
+            <td>@l.DtPagamento?.ToString("dd/MM/yyyy")</td>
+            <td class="num">@l.VlPago?.ToString("N2")</td>
+            <td class="num">@l.QtDiasAtraso</td>
+            <td>@l.Situacao</td>
+            <td>
+                @if (l.IdSituacao == 2)
+                {
+                    <a href="/Cobranca/Boleto.aspx?id=@l.CdParcela" target="_blank" data-enhance-nav="false">Boleto</a>
+                    <text> </text>
+                    <a href="/Cobranca/Baixa.aspx?id=@l.CdParcela" data-enhance-nav="false">Baixar</a>
+                }
+            </td>
+        </tr>
+    }
+</table>
+<p id="total">@Total parcela(s)@(Total == 2000 ? " (limitado a 2000; refine o filtro)" : "")</p>
+@if (Paginas > 1)
+{
+    <p id="paginas">
+        @for (var i = 1; i <= Paginas; i++)
+        {
+            var p = i;
+            if (p == PaginaAtual) { <b>@p</b> }
+            else if (AoMudarPagina.HasDelegate) { <a href="javascript:void(0)" @onclick="() => AoMudarPagina.InvokeAsync(p)">@p</a> }
+            else { <a href="@UrlPagina!(p)">@p</a> }
+            <text> </text>
+        }
+    </p>
+}
+
+@code {
+    [Parameter] public IReadOnlyList<LinhaParcela> Linhas { get; set; } = [];
+    [Parameter] public int Total { get; set; }
+    [Parameter] public int PaginaAtual { get; set; } = 1;
+    [Parameter] public Func<int, string>? UrlPagina { get; set; }
+    [Parameter] public EventCallback<int> AoMudarPagina { get; set; }
+    int Paginas => (int)Math.Ceiling(Total / (double)ConsultaParcelas.TamanhoPagina);
+}

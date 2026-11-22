@@ -1,0 +1,25 @@
+@inherits LayoutComponentBase
+
+<table class="topo" cellpadding="0" cellspacing="0">
+    <tr>
+        <td class="topoLogo">SGC <span>CeCons Consórcios</span></td>
+        <td class="topoUsuario">@_nome &nbsp;|&nbsp; @DateTime.Today.ToString("dd/MM/yyyy") &nbsp;|&nbsp; <a href="/Default.aspx" data-enhance-nav="false">Painel</a></td>
+    </tr>
+</table>
+<table class="corpo" cellpadding="0" cellspacing="0">
+    <tr>
+        <td class="menu"><Menu /></td>
+        <td class="conteudo">@Body</td>
+    </tr>
+</table>
+<div class="rodape">SGC versão 4.2 · CeCons Administradora de Consórcios · tela .NET 10 (Blazor)</div>
+
+@code {
+    [CascadingParameter] Task<AuthenticationState>? Autenticacao { get; set; }
+    string? _nome;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Autenticacao is not null) _nome = (await Autenticacao).User.FindFirstValue(ClaimTypes.Name);
+    }
+}

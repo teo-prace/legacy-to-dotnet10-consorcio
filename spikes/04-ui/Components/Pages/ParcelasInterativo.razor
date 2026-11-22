@@ -1,0 +1,63 @@
+@page "/novo/int/parcelas"
+@attribute [Authorize(Policy = "Logado")]
+@rendermode InteractiveServer
+@inject ConsultaParcelas Consulta
+
+<PageTitle>SGC - Parcelas</PageTitle>
+<h1>Consulta de parcelas</h1>
+@* Implementação "idiomática": estado no circuito do servidor, eventos por SignalR, sem POST nem GET. *@
+<div class="filtro">
+    Grupo:
+    <select class="campo" @bind="_grupo" name="grupo">
+        <option value="">(todos)</option>
+        @foreach (var g in _grupos)
+        {
+            <option value="@g.CdGrupo">@g.NrGrupo</option>
+        }
+    </select>
+    &nbsp; Situação:
+    <select class="campo" @bind="_situacao" name="situacao">
+        @foreach (var (v, t) in ParcelasSsr.Situacoes)
+        {
+            <option value="@v">@t</option>
+        }
+    </select>
+    &nbsp; Vencimento de: <input type="date" class="campo" @bind="_de" name="de" />
+    até: <input type="date" class="campo" @bind="_ate" name="ate" />
+    &nbsp; Nosso nº: <input type="text" class="campo" style="width:90px" @bind="_nn" name="nn" />
+    &nbsp; <button class="botao" id="pesquisar" @onclick="() => PesquisarAsync(1)">Pesquisar</button>
+</div>
+
+<GradeParcelas Linhas="_linhas" Total="_total" PaginaAtual="_pagina" AoMudarPagina="PesquisarAsync" />
+
+@code {
+    public static int ConsultasExecutadas;   // diagnóstico: quantas vezes o banco foi consultado
+
+    [SupplyParameterFromQuery(Name = "grupo")] public int? GrupoUrl { get; set; }
+    [SupplyParameterFromQuery(Name = "situacao")] public string? SituacaoUrl { get; set; }
+
+    string? _grupo;
+    string _situacao = "V";
+    DateTime? _de, _ate;
+    string? _nn;
+    int _pagina = 1;
+    IReadOnlyList<Grupo> _grupos = [];
+    IReadOnlyList<LinhaParcela> _linhas = [];
+    int _total;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _grupo = GrupoUrl?.ToString();
+        _situacao = SituacaoUrl ?? "V";
+        _grupos = await Consulta.GruposAsync();
+        await PesquisarAsync(1);
+    }
+
+    async Task PesquisarAsync(int pagina)
+    {
+        Interlocked.Increment(ref ConsultasExecutadas);
+        _pagina = pagina;
+        var filtro = new FiltroParcelas(int.TryParse(_grupo, out var g) ? g : null, _situacao, _de, _ate, _nn, pagina);
+        (_linhas, _total) = await Consulta.PesquisarAsync(filtro);
+    }
+}

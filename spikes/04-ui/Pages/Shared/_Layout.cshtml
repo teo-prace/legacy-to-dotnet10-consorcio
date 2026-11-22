@@ -1,0 +1,27 @@
+@using System.Security.Claims
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <title>@ViewData["Title"]</title>
+    @* mesmo CSS do legado, servido pelo próprio legado através da fachada: uma fonte só durante a convivência *@
+    <link href="/css/estilo.css" rel="stylesheet" type="text/css" />
+</head>
+<body data-tecnologia="razor-pages">
+    <table class="topo" cellpadding="0" cellspacing="0">
+        <tr>
+            <td class="topoLogo">SGC <span>CeCons Consórcios</span></td>
+            <td class="topoUsuario">@User.FindFirstValue(ClaimTypes.Name) &nbsp;|&nbsp; @DateTime.Today.ToString("dd/MM/yyyy") &nbsp;|&nbsp; <a href="/Default.aspx">Painel</a></td>
+        </tr>
+    </table>
+    <table class="corpo" cellpadding="0" cellspacing="0">
+        <tr>
+            <td class="menu">
+                <partial name="_Menu" />
+            </td>
+            <td class="conteudo">@RenderBody()</td>
+        </tr>
+    </table>
+    <div class="rodape">SGC versão 4.2 · CeCons Administradora de Consórcios · tela .NET 10 (Razor Pages)</div>
+</body>
+</html>
