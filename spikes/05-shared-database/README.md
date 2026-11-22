@@ -46,9 +46,14 @@ waits for installment B; the second holds B and waits for the quota. SQL Server 
 already happens in production today**, for instance when the bank return batch and an operator post
 payments for the same quota; the legacy screen doesn't retry and shows the deadlock message.
 
-**Fix tested on the copy (05-4b):** lock the quota first thing in the transaction
+**Fix (05-4b):** lock the quota first thing in the transaction
 (`SELECT ... FROM TB_COTA WITH (UPDLOCK, HOLDLOCK) WHERE CD_COTA = @CD_COTA`). Payments on the same quota
 queue up; different quotas are not affected. One statement in a legacy procedure, with this test as the
 safety net.
+
+The fix was then applied to the legacy procedure, marked between `[MIGRACAO 2026-11 - inicio]` and
+`[MIGRACAO 2026-11 - fim]`, and logged in [legacy-changes.md](../../decisions/legacy-changes.md). Since
+then, 05-4 removes the marked block on the database copy to keep reproducing the problem, and 05-4b
+checks that the procedure in the repository has the fix.
 
 Decision: [ADR-006](../../decisions/adr-006-shared-database.md).

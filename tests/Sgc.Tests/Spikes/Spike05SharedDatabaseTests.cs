@@ -187,6 +187,7 @@ public class Spike05SharedDatabaseTests
             foreach (var comRetentativa in new[] { false, true })
             {
                 _banco.Restaurar();
+                VoltarProcedureParaVersaoAntiga();
                 // cotas contempladas (situação 2) com 2 ou mais parcelas emitidas: a quitação lê as parcelas da cota
                 var alvos = Emitidas("C.ID_SITUACAO = 2 AND P.CD_COTA IN (SELECT CD_COTA FROM TB_PARCELA WHERE ID_SITUACAO = 2 GROUP BY CD_COTA HAVING COUNT(*) > 1)");
                 var gw = new BaixaParcelas(BancoPoc06.Conexao(), maxTentativas: comRetentativa ? 5 : 1);
@@ -223,7 +224,21 @@ public class Spike05SharedDatabaseTests
         Assert.Equal(totalComRetentativa, baixadasComRetentativa);
     }
 
-    [Fact(DisplayName = "05-4b · procedure fix (lock the quota first in the transaction): no deadlock, even without retry")]
+    /// <summary>
+    /// The fix is in legacy/database/procs/SP_BAIXA_PARCELA.sql (the "[MIGRACAO 2026-11 ...]" block). To keep
+    /// proving the problem, 05-4 removes that block on the database copy and goes back to the 2016 version.
+    /// </summary>
+    static void VoltarProcedureParaVersaoAntiga()
+    {
+        using var cn = Abrir();
+        var atual = cn.ExecuteScalar<string>("SELECT OBJECT_DEFINITION(OBJECT_ID('SP_BAIXA_PARCELA'))")!;
+        var antiga = System.Text.RegularExpressions.Regex.Replace(atual, @"-- \[MIGRACAO 2026-11 - inicio\].*?-- \[MIGRACAO 2026-11 - fim\]\r?\n",
+                                                                   "", System.Text.RegularExpressions.RegexOptions.Singleline);
+        Assert.NotEqual(atual, antiga);
+        cn.Execute(antiga.Replace("CREATE PROCEDURE", "ALTER PROCEDURE"));
+    }
+
+    [Fact(DisplayName = "05-4b · fixed procedure (locks the quota first in the transaction): no deadlock, even without retry")]
     public async Task CorrecaoDoDeadlockNaProcedure()
     {
         const int rodadas = 5;
@@ -231,14 +246,8 @@ public class Spike05SharedDatabaseTests
         for (var rodada = 0; rodada < rodadas; rodada++)
         {
             _banco.Restaurar();
-            using (var cn = Abrir())
-            {
-                var texto = cn.ExecuteScalar<string>("SELECT OBJECT_DEFINITION(OBJECT_ID('SP_BAIXA_PARCELA'))")!;
-                var corrigida = System.Text.RegularExpressions.Regex.Replace(texto.Replace("CREATE PROCEDURE", "ALTER PROCEDURE"), @"BEGIN TRANSACTION\r?\n",
-                    "BEGIN TRANSACTION\n\n-- trava a cota primeiro: baixas da mesma cota entram em fila em vez de se travarem\nSELECT @LINHAS = COUNT(*) FROM TB_COTA WITH (UPDLOCK, HOLDLOCK) WHERE CD_COTA = @CD_COTA\n");
-                Assert.NotEqual(texto.Replace("CREATE PROCEDURE", "ALTER PROCEDURE"), corrigida);
-                cn.Execute(corrigida);
-            }
+            // a procedure do repositório já tem a correção (legacy/database/procs/SP_BAIXA_PARCELA.sql)
+            Assert.Contains("[MIGRACAO 2026-11 - inicio]", Abrir().ExecuteScalar<string>("SELECT OBJECT_DEFINITION(OBJECT_ID('SP_BAIXA_PARCELA'))"));
             var alvos = Emitidas("C.ID_SITUACAO = 2 AND P.CD_COTA IN (SELECT CD_COTA FROM TB_PARCELA WHERE ID_SITUACAO = 2 GROUP BY CD_COTA HAVING COUNT(*) > 1)");
             var gw = new BaixaParcelas(BancoPoc06.Conexao(), maxTentativas: 1);
             var largada = new TaskCompletionSource();

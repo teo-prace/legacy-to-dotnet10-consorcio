@@ -16,6 +16,21 @@ GO
   2005-07 R.A.  versao inicial
   2014-05 J.P.  origem retorno bancario, multa/juros
   2016-09 J.P.  lancamentos por fundo
+  2026-11 MIGRACAO  trava a cota no inicio da transacao (correcao de deadlock)
+
+  >>> MUDANCA FEITA PELA MIGRACAO PARA .NET 10 (2026-11) <<<
+  Problema: duas baixas da mesma cota contemplada ao mesmo tempo (parcelas
+  diferentes) se travavam: uma segurava a parcela A e a cota, e esperava a
+  parcela B na verificacao de quitacao; a outra segurava a parcela B e
+  esperava a cota. O SQL Server matava uma (erro 1205). Medido: 50 de 530
+  baixas paralelas (9,4%). Acontecia com batch de retorno + operador.
+  Correcao: a primeira coisa dentro da transacao e travar a linha da cota
+  (UPDLOCK, HOLDLOCK). Baixas da MESMA cota entram em fila; cotas
+  diferentes nao se afetam. Nenhuma regra de negocio mudou.
+  Prova: tests/Sgc.Tests/Spikes/Spike05SharedDatabaseTests.cs (05-4 reproduz
+  com a versao antiga, 05-4b mostra 0 deadlocks com esta).
+  Decisao: decisions/adr-006-shared-database.md
+  Registro: decisions/legacy-changes.md
 *****************************************************************************/
 CREATE PROCEDURE SP_BAIXA_PARCELA
     @CD_PARCELA          INT,
@@ -104,6 +119,10 @@ SET @VL_ENC_FC = @VL_ENCARGOS - @VL_ENC_TA
 SET @HIST = 'Parcela ' + CAST(@NR_PARCELA AS VARCHAR) + ' - cota ' + RIGHT('000' + CAST(@NR_COTA AS VARCHAR), 3) + '-' + CAST(@NR_VERSAO AS VARCHAR)
 
 BEGIN TRANSACTION
+
+-- [MIGRACAO 2026-11 - inicio] trava a cota antes de tudo (ver cabecalho, ADR-006)
+SELECT @LINHAS = COUNT(*) FROM TB_COTA WITH (UPDLOCK, HOLDLOCK) WHERE CD_COTA = @CD_COTA
+-- [MIGRACAO 2026-11 - fim]
 
 UPDATE TB_PARCELA
    SET DT_PAGAMENTO       = @DT_PAGAMENTO,
