@@ -47,6 +47,10 @@ public static class TestEnvironment
         await WaitAsync($"http://localhost:{port}/Login.aspx", TimeSpan.FromSeconds(180));
     }
 
+    /// <summary>Starts a spike app (spikes/&lt;folder&gt;), already built.</summary>
+    public static Task<string> StartSpikeAsync(string spikeFolder, string dll, int port, IDictionary<string, string>? env = null, string healthPath = "/novo/ping") =>
+        StartAppAsync(PathFromRoot("spikes", spikeFolder), dll, port, env, healthPath);
+
     /// <summary>Starts an already built .NET app on a port. Extra variables override its configuration.</summary>
     public static async Task<string> StartAppAsync(string projectFolder, string dll, int port, IDictionary<string, string>? env = null, string healthPath = "/novo/ping")
     {
