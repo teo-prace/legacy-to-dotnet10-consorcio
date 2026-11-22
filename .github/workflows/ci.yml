@@ -1,0 +1,61 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    name: Build legacy, oracle, SGC.Novo, spikes and tests
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Legacy system (.NET Framework 4.8, VB.NET, WebForms)
+        shell: cmd
+        run: legacy\src\build.cmd
+
+      - name: Legacy oracle (.NET Framework 4.8)
+        run: dotnet build tools/oracle
+
+      - name: SGC.Novo (.NET 10)
+        run: dotnet build modern/src/Sgc.Novo -c Release
+
+      - name: Spikes
+        shell: pwsh
+        run: |
+          Get-ChildItem spikes -Directory | Where-Object Name -ne 'shared' | ForEach-Object {
+            dotnet build $_.FullName
+            if ($LASTEXITCODE) { exit 1 }
+          }
+
+      # The test suite runs on a development machine: it needs SQL Server LocalDB with the SGC database,
+      # IIS Express for the legacy site, Edge, and the VB6 component registered through COM.
+      - name: Tests (build only)
+        run: dotnet build tests/Sgc.Tests
+
+  container:
+    name: SGC.Novo container image
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t sgc-novo modern
+
+      - name: Smoke test
+        run: |
+          docker run -d --name sgc-novo -p 8080:8080 \
+            -e ReverseProxy__Clusters__legado__Destinations__iis__Address=http://127.0.0.1:9/ sgc-novo
+          for i in $(seq 1 30); do curl -sf http://localhost:8080/novo/ping && break; sleep 1; done
+          echo
+          # the Blazor script is served by the new side
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/_framework/blazor.web.js)" = 200
+          # with the legacy site unreachable, the facade answers its own 503 page with anti-framing headers
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/Login.aspx)" = 503
+          curl -s -D - -o /dev/null http://localhost:8080/Login.aspx | grep -i "x-frame-options: SAMEORIGIN"
