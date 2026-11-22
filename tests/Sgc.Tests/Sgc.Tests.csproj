@@ -21,4 +21,9 @@
     <None Update="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- compiled here instead of referenced: Smart App Control on the dev machine blocks freshly built library DLLs -->
+    <Compile Include="..\..\spikes\05-shared-database\BaixaParcelas.cs" Link="Spikes\Code\BaixaParcelas.cs" />
+  </ItemGroup>
+
 </Project>
